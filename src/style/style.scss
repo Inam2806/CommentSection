@@ -1,0 +1,81 @@
+// CommentSection.scss
+
+.comment-section {
+    margin: 20px;
+    padding: 20px;
+    border: 1px solid #3498db; /* Blue border color */
+    border-radius: 8px;
+    background-color: #ecf0f1; /* Light gray background color */
+    font-family: 'Arial', sans-serif; /* Change font family */
+  
+    h2 {
+      color: #3498db; /* Blue text color */
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+  
+    ul {
+      list-style-type: none;
+      padding: 0;
+  
+      li {
+        margin-bottom: 15px;
+        background-color: #fff; /* White background color for new comments */
+        padding: 10px; /* Add padding for better spacing */
+  
+        &:not(:last-child) {
+          border-bottom: 1px solid #bdc3c7; /* Lighter gray border color between comments */
+        }
+  
+        .comment-content {
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 10px; /* Add space between text and buttons */
+        }
+  
+        .comment-text {
+          margin-bottom: 10px; /* Add space between text and buttons */
+        }
+  
+        .comment-buttons {
+          display: flex;
+          align-items: flex-end; /* Align buttons at the bottom */
+        }
+  
+        button {
+          padding: 8px;
+          cursor: pointer;
+          background-color: #3498db; /* Blue button background color */
+          color: #fff; /* White button text color */
+          border: none;
+          border-radius: 4px;
+          font-family: 'Arial', sans-serif; /* Change font family */
+          margin-right: 10px; /* Add margin between buttons */
+  
+          &:last-child {
+            margin-right: 0;
+          }
+        }
+  
+        ul {
+          list-style-type: none;
+          padding: 0;
+          margin-top: 10px;
+  
+          li {
+            margin-bottom: 5px;
+          }
+        }
+      }
+    }
+  
+    textarea {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border: 1px solid #bdc3c7; /* Lighter gray border color */
+      border-radius: 4px;
+      resize: vertical;
+    }
+  }
+  
