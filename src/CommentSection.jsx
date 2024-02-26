@@ -1,31 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './style/style.scss';
 import 'font-awesome/css/font-awesome.min.css';
-
-
+import useInaStar from 'ina-star';
+import { v4 as uuidv4 } from 'uuid';
 const CommentSection = () => {
   const [comments, setComments] = useState([]);
   const [newCommentText, setNewCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState({});
-  const [starredComments, setStarredComments] = useState(new Set());
+
+  const [showTimestamp, setShowTimestamp] = useState(false);
+  const { handleToggleStar, isCommentStarred } = useInaStar();
+  useEffect(() => {
+    const storedComments = JSON.parse(localStorage.getItem('comments')) || [];
+   
+    setComments(storedComments);
+
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('comments', JSON.stringify(comments));
+  }, [comments]);
 
   const generateCommentId = () => {
     if (!replyingTo) {
       // If not replying to any comment, generate a regular comment ID
-      return comments.length + 1;
+      return uuidv4();
     } else {
       // If replying, generate a reply ID based on the hierarchy
       const parentComment = comments.find(comment => comment.id === replyingTo.id);
       if (parentComment) {
         const replyIndex = parentComment.replies.length + 1;
-        const parentLevel = parentComment.id.toString().split('.').length;
-
-        return `${parentComment.id}.${replyIndex}`.padEnd(parentLevel + 2, '.1');
+        return `${parentComment.id}.${replyIndex}`;
       }
     }
     return null; // Handle the case where replyingTo is not found
   };
+  
 
 
   const handlePostComment = () => {
@@ -45,24 +56,43 @@ const CommentSection = () => {
     setNewCommentText('');
     setReplyingTo(null);
   };
+  const handleDeleteStars = (commentId) => {
+    const updatedStarredComments = { ...localStorage.getItem('starredComments') };
+    if (updatedStarredComments[commentId]) {
+      delete updatedStarredComments[commentId];
+      localStorage.setItem('starredComments', JSON.stringify(updatedStarredComments));
+    }
+  };
+  
   const handleDeleteComment = (commentId) => {
     const updatedComments = deleteComment(comments, commentId);
     setComments(updatedComments);
+    handleDeleteStars(commentId);
+  };
+  const deleteComment = (commentList, commentId) => {
+    const stack = [...commentList];
+  
+    while (stack.length > 0) {
+      const currentComment = stack.pop();
+  
+      if (currentComment.id === commentId) {
+        // Exclude the comment to be deleted
+        continue;
+      }
+  
+      if (currentComment.replies && currentComment.replies.length > 0) {
+        // Add replies to the stack for further processing
+        stack.push(...currentComment.replies);
+        // Remove the deleted comment from replies
+        currentComment.replies = currentComment.replies.filter(
+          (reply) => reply.id !== commentId
+        );
+      }
+    }
+  
+    return commentList.filter((comment) => comment.id !== commentId);
   };
   
-  const deleteComment = (commentList, commentId) => {
-    return commentList.filter((comment) => {
-      if (comment.id === commentId) {
-        return false; // Exclude the comment to be deleted
-      } else if (comment.replies && comment.replies.length > 0) {
-        // Recursively update replies
-        comment.replies = deleteComment(comment.replies, commentId);
-        return true;
-      }
-      return true;
-    });
-  };
-
   const handleReplyToComment = (parentCommentId) => {
     setReplyingTo({ id: parentCommentId });
   };
@@ -100,7 +130,10 @@ const CommentSection = () => {
     setReplyText((prevReplyText) => ({ ...prevReplyText, [parentCommentId]: '' }));
     setReplyingTo(null);
   };
-
+  const toggleTimestampVisibility = () => {
+    setShowTimestamp((prevShowTimestamp) => !prevShowTimestamp);
+  };
+  
   const updateReplies = (replies, parentCommentId) => {
     return replies.map((reply) => {
       if (reply.id === parentCommentId) {
@@ -127,27 +160,20 @@ const CommentSection = () => {
     });
   };
 
-  const handleToggleStar = (commentId) => {
-    setStarredComments((prevStarredComments) => {
-      const updatedStarredComments = { ...prevStarredComments };
-      if (updatedStarredComments[commentId]) {
-        delete updatedStarredComments[commentId];
-      } else {
-        updatedStarredComments[commentId] = true;
-      }
-      return updatedStarredComments;
-    });
-  };
 
-  const isCommentStarred = (commentId) => { 
-    return starredComments[commentId];
-  };
+
+  
+ 
+  
   const renderComments = (commentList, level = 1) => (
     <ul>
       {commentList.map((comment) => (
         <li key={comment.id}>
           <div className="comment-content">
-            <div className="comment-text">{comment.text}</div>
+            <div className="comment-text">
+              {comment.text}
+              {showTimestamp && <span className="timestamp">{new Date(comment.timestamp).toLocaleString()}</span>}
+            </div>
             <div className="comment-buttons">
               <button onClick={() => handleDeleteComment(comment.id)}>Delete</button>
   
@@ -156,9 +182,12 @@ const CommentSection = () => {
                   <button onClick={() => handleReplyToComment(comment.id)}>Reply</button>
                   <button onClick={() => handleToggleStar(comment.id)}>
                     {isCommentStarred(comment.id) ? (
-                      <i className="fa-solid fa-star"></i>
+                       <i className="fa-regular fa-star"></i>
+                      
                     ) : (
-                      <i className="fa-regular fa-star"></i>
+                     <i className="fa-solid fa-star"></i>
+                     
+                      
                     )}
                   </button>
                 </>
@@ -185,18 +214,28 @@ const CommentSection = () => {
       ))}
     </ul>
   );
-  
   return (
     <div className="comment-section">
-    <h2>Comments</h2>
-    {renderComments(comments)}
-    <textarea
-      placeholder="Type your comment"
-      value={newCommentText}
-      onChange={(e) => setNewCommentText(e.target.value)}
-    ></textarea>
-    <button onClick={handlePostComment}>Post Comment</button>
-  </div>
+      <h2>Comments</h2>
+      <button className='timestampButton' onClick={toggleTimestampVisibility}>
+        {showTimestamp ? (
+          <>
+            Hide Timestamp <i className="fa fa-eye-slash"></i>
+          </>
+        ) : (
+          <>
+            Show Timestamp <i className="fa fa-eye"></i>
+          </>
+        )}
+      </button>
+      {renderComments(comments)}
+      <textarea
+        placeholder="Type your comment"
+        value={newCommentText}
+        onChange={(e) => setNewCommentText(e.target.value)}
+      ></textarea>
+      <button onClick={handlePostComment}>Post Comment</button>
+    </div>
   );
 };
 
